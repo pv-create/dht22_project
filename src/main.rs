@@ -6,7 +6,6 @@ use tokio;
 const GPIO_PIN: u8 = 4;
 const MAX_RETRIES: u8 = 5;
 
-
 fn read_dht22() -> Result<(f32, f32), Box<dyn std::error::Error>> {
     let gpio = Gpio::new()?;
     let mut output_pin = gpio.get(GPIO_PIN)?.into_output();
@@ -67,7 +66,8 @@ fn read_dht22() -> Result<(f32, f32), Box<dyn std::error::Error>> {
     Ok((humidity, temperature))
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Подключение к RabbitMQ
     let addr = "amqp://guest:guest@172.20.10.4:5672";
     let conn = Connection::connect(addr, ConnectionProperties::default()).await?;
@@ -76,6 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Объявление очереди
     let queue_name = "weather_data";
     channel.queue_declare(queue_name, QueueDeclareOptions::default(), FieldTable::default()).await?;
+
     loop {
         let mut retries = 0;
         while retries < MAX_RETRIES {
@@ -97,13 +98,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Err(e) => {
                     println!("Error: {}. Retrying...", e);
                     retries += 1;
-                    thread::sleep(Duration::from_secs(2));
+                    tokio::time::sleep(Duration::from_secs(2)).await;
                 }
             }
         }
         if retries == MAX_RETRIES {
             println!("Failed to read sensor after {} attempts", MAX_RETRIES);
         }
-        thread::sleep(Duration::from_secs(2));
+        tokio::time::sleep(Duration::from_secs(2)).await;
     }
 }
