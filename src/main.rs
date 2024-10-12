@@ -2,6 +2,7 @@ use rppal::gpio::{Gpio, InputPin, OutputPin};
 use std::{thread, time::Duration};
 
 const GPIO_PIN: u8 = 4;
+const MAX_RETRIES: u8 = 5;
 
 fn read_dht22() -> Result<(f32, f32), Box<dyn std::error::Error>> {
     let gpio = Gpio::new()?;
@@ -13,11 +14,12 @@ fn read_dht22() -> Result<(f32, f32), Box<dyn std::error::Error>> {
     output_pin.set_high();
     thread::sleep(Duration::from_micros(40));
     
-    // Освобождаем пин и создаем новый InputPin
     drop(output_pin);
     let input_pin = gpio.get(GPIO_PIN)?.into_input();
 
-    // Чтение данных
+    // Ожидание начала ответа от датчика
+    thread::sleep(Duration::from_micros(10));
+
     let mut data = [0u8; 5];
     let mut bit = 7;
     let mut byte = 0;
@@ -46,12 +48,15 @@ fn read_dht22() -> Result<(f32, f32), Box<dyn std::error::Error>> {
         }
     }
 
+    // Отладочный вывод
+    println!("Raw data: {:?}", data);
+
     // Проверка контрольной суммы
-    if data[4] != ((data[0] as u16 + data[1] as u16 + data[2] as u16 + data[3] as u16) & 0xFF) as u8 {
-        return Err("Checksum mismatch".into());
+    let checksum = ((data[0] as u16 + data[1] as u16 + data[2] as u16 + data[3] as u16) & 0xFF) as u8;
+    if data[4] != checksum {
+        return Err(format!("Checksum mismatch: calculated {:02X}, received {:02X}", checksum, data[4]).into());
     }
 
-    // Расчет влажности и температуры
     let humidity = (data[0] as f32 * 256.0 + data[1] as f32) / 10.0;
     let temperature = ((data[2] & 0x7F) as f32 * 256.0 + data[3] as f32) / 10.0;
     let temperature = if data[2] & 0x80 != 0 { -temperature } else { temperature };
@@ -61,11 +66,22 @@ fn read_dht22() -> Result<(f32, f32), Box<dyn std::error::Error>> {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
-        match read_dht22() {
-            Ok((humidity, temperature)) => {
-                println!("Humidity: {:.1}%, Temperature: {:.1}°C", humidity, temperature);
+        let mut retries = 0;
+        while retries < MAX_RETRIES {
+            match read_dht22() {
+                Ok((humidity, temperature)) => {
+                    println!("Humidity: {:.1}%, Temperature: {:.1}°C", humidity, temperature);
+                    break;
+                }
+                Err(e) => {
+                    println!("Error: {}. Retrying...", e);
+                    retries += 1;
+                    thread::sleep(Duration::from_secs(2));
+                }
             }
-            Err(e) => println!("Error: {}", e),
+        }
+        if retries == MAX_RETRIES {
+            println!("Failed to read sensor after {} attempts", MAX_RETRIES);
         }
         thread::sleep(Duration::from_secs(2));
     }
