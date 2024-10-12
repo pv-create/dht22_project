@@ -1,10 +1,11 @@
 use rppal::gpio::{Gpio, InputPin, OutputPin};
 use std::{thread, time::Duration};
+use lapin::{Connection, ConnectionProperties, options::*, types::FieldTable, BasicProperties};
+use tokio;
 
 const GPIO_PIN: u8 = 4;
 const MAX_RETRIES: u8 = 5;
 
-const RABIT_SERVER: 
 
 fn read_dht22() -> Result<(f32, f32), Box<dyn std::error::Error>> {
     let gpio = Gpio::new()?;
@@ -67,11 +68,29 @@ fn read_dht22() -> Result<(f32, f32), Box<dyn std::error::Error>> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Подключение к RabbitMQ
+    let addr = "amqp://guest:guest@172.20.10.4:5672";
+    let conn = Connection::connect(addr, ConnectionProperties::default()).await?;
+    let channel = conn.create_channel().await?;
+
+    // Объявление очереди
+    let queue_name = "weather_data";
+    channel.queue_declare(queue_name, QueueDeclareOptions::default(), FieldTable::default()).await?;
     loop {
         let mut retries = 0;
         while retries < MAX_RETRIES {
             match read_dht22() {
                 Ok((humidity, temperature)) => {
+                    let data = format!("{{\"temperature\": {}, \"humidity\": {}}}", temperature, humidity);
+
+                    // Отправка данных в RabbitMQ
+                    channel.basic_publish(
+                        "",
+                        queue_name,
+                        BasicPublishOptions::default(),
+                        data.as_bytes(),
+                        BasicProperties::default(),
+                    ).await?;
                     println!("Humidity: {:.1}%, Temperature: {:.1}°C", humidity, temperature);
                     break;
                 }
