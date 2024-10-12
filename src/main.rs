@@ -4,6 +4,8 @@ use std::{thread, time::Duration};
 const GPIO_PIN: u8 = 4;
 const MAX_RETRIES: u8 = 5;
 
+const RABIT_SERVER: 
+
 fn read_dht22() -> Result<(f32, f32), Box<dyn std::error::Error>> {
     let gpio = Gpio::new()?;
     let mut output_pin = gpio.get(GPIO_PIN)?.into_output();
