@@ -69,7 +69,7 @@ fn read_dht22() -> Result<(f32, f32), Box<dyn std::error::Error>> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Подключение к RabbitMQ
-    let addr = "amqp://guest:guest@172.20.10.4:5672";
+    let addr = "amqp://myuser:mypassword@172.20.10.4:5672";
     let conn = Connection::connect(addr, ConnectionProperties::default()).await?;
     let channel = conn.create_channel().await?;
 
