@@ -46,8 +46,15 @@ fn read_dht22() -> Result<(f32, f32), Box<dyn std::error::Error>> {
         }
     }
 
-    // Проверка контрольной суммы и расчет значений как раньше
-    // ...
+    // Проверка контрольной суммы
+    if data[4] != ((data[0] as u16 + data[1] as u16 + data[2] as u16 + data[3] as u16) & 0xFF) as u8 {
+        return Err("Checksum mismatch".into());
+    }
+
+    // Расчет влажности и температуры
+    let humidity = (data[0] as f32 * 256.0 + data[1] as f32) / 10.0;
+    let temperature = ((data[2] & 0x7F) as f32 * 256.0 + data[3] as f32) / 10.0;
+    let temperature = if data[2] & 0x80 != 0 { -temperature } else { temperature };
 
     Ok((humidity, temperature))
 }
