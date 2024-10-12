@@ -9,7 +9,7 @@
 
 ## Инструкция по запуску
 <ul>
-<li>Устанавливаем на расбери ОС <a hreg = "https://www.raspberrypi.com/software/">инструкция с офф сайта</a>
+<li>Устанавливаем на расбери ОС <a href = "https://www.raspberrypi.com/software/">инструкция с офф сайта</a>
 <li>устанавливаем язык программирования rust
 <pre>
 <code>
@@ -20,5 +20,5 @@ export PATH="$HOME/.cargo/bin:$PATH"
 </pre>
 <li> Клонируем репозиторий командой git clone
 <li>Собираем проект командой cargo build и запускаем cargo run
-<li> подключаем датчик как <a hreg = "https://habrastorage.org/storage2/a84/bd3/77a/a84bd377a9ad2d3bbe7376a0b89418d0.jpg">тут</a> 
+<li> подключаем датчик как <a href = "https://habrastorage.org/storage2/a84/bd3/77a/a84bd377a9ad2d3bbe7376a0b89418d0.jpg">тут</a> 
 </ul>
